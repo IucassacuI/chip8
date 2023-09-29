@@ -73,9 +73,7 @@ func clearscreen() {
 }
 
 func update() {
-	cmd := exec.Command("cmd", "/c", "cls")
-	cmd.Stdout = os.Stdout
-	cmd.Run()
+	fmt.Printf("\033[H\033[2J")
 
 	for _, y := range screen {
 		for _, x := range y {
