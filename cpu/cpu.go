@@ -2,6 +2,7 @@ package cpu
 import (
 	"math/rand"
 	"time"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type CPU struct {
@@ -25,6 +26,25 @@ type Instruction struct {
 	n uint8
 	x uint8
 	y uint8
+}
+
+var keymap = map[byte]ebiten.Key {
+	0x1: ebiten.KeyDigit1,
+	0x2: ebiten.KeyDigit2,
+	0x3: ebiten.KeyDigit3,
+	0xC: ebiten.KeyDigit4,
+  0x4: ebiten.KeyQ,
+  0x5: ebiten.KeyW,
+  0x6: ebiten.KeyE,
+  0xD: ebiten.KeyR,
+  0x7: ebiten.KeyA,
+  0x8: ebiten.KeyS,
+  0x9: ebiten.KeyD,
+  0xE: ebiten.KeyF,
+  0xA: ebiten.KeyZ,
+  0x0: ebiten.KeyX,
+  0xB: ebiten.KeyC,
+  0xF: ebiten.KeyV,
 }
 
 func (cpu *CPU) Init(RAM *[4096]uint8, VRAM *[32][64]uint8){
@@ -80,12 +100,8 @@ func (cpu *CPU) Decode(opcode uint16) Instruction {
 	}
 }
 
-func (cpu *CPU) Draw(vx, vy, n uint8){
-}
-
 func (cpu *CPU) Execute(inst Instruction){
 	var next bool = true
-	var keyp uint8
 
 	switch(inst.opcode){
 		case 0:
@@ -147,19 +163,21 @@ func (cpu *CPU) Execute(inst Instruction){
 			cpu.registers[inst.x] ^= cpu.registers[inst.y]
 
 		case 4:
-			if cpu.registers[inst.y] > 0xff - cpu.registers[inst.y] {
+			res := uint16(cpu.registers[inst.x]) + uint16(cpu.registers[inst.y])
+
+			if res > 0xff {
 				cpu.registers[15] = 1
 			} else {
 				cpu.registers[15] = 0
 			}
 
-			cpu.registers[inst.x] += cpu.registers[inst.y]
+			cpu.registers[inst.x] = uint8(res & 0xff)
 
 		case 5:
-			if cpu.registers[inst.y] > cpu.registers[inst.x] {
-				cpu.registers[15] = 0
-			} else {
+			if cpu.registers[inst.x] >= cpu.registers[inst.y] {
 				cpu.registers[15] = 1
+			} else {
+				cpu.registers[15] = 0
 			}
 
 			cpu.registers[inst.x] -= cpu.registers[inst.y]
@@ -169,10 +187,10 @@ func (cpu *CPU) Execute(inst Instruction){
 			cpu.registers[inst.x] >>= 1
 
 		case 7:
-			if cpu.registers[inst.x] > cpu.registers[inst.y] {
-				cpu.registers[15] = 0
-			} else {
+			if cpu.registers[inst.y] >= cpu.registers[inst.x] {
 				cpu.registers[15] = 1
+			} else {
+				cpu.registers[15] = 0
 			}
 
 			cpu.registers[inst.x] = cpu.registers[inst.y] - cpu.registers[inst.x]
@@ -219,11 +237,11 @@ func (cpu *CPU) Execute(inst Instruction){
 		case 0xe000:
 			switch inst.n {
 			case 0xE:
-					if keyp == cpu.registers[inst.x] {
+				if ebiten.IsKeyPressed(keymap[cpu.registers[inst.x]]) {
 						cpu.pc += 2
 					}
 			case 1:
-					if keyp != cpu.registers[inst.x] {
+				if !ebiten.IsKeyPressed(keymap[cpu.registers[inst.x]]) {
 						cpu.pc += 2
 					}
 			default:
@@ -235,12 +253,20 @@ func (cpu *CPU) Execute(inst Instruction){
 			case 7:
 				cpu.registers[inst.x] = cpu.delay_timer
 			case 0xA:
-					for {
-						if keyp != 0 {
-							break
-						}
+				var key int = -1
+
+				for code, ref := range keymap {
+					if ebiten.IsKeyPressed(ref) {
+						key = int(code)
 					}
-					cpu.registers[inst.x] = keyp
+				}
+
+				if key != -1 {
+					cpu.registers[inst.x] = uint8(key)
+				} else {
+					next = false
+				}
+
 			case 0x15:
 				cpu.delay_timer = cpu.registers[inst.x]
 			case 0x18:

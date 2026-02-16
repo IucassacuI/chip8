@@ -5,7 +5,6 @@ import (
   "github.com/IucassacuI/chip8/cpu"
 	"image/color"
 	"os"
-	"fmt"
 )
 
 type CHIP8 struct {
@@ -18,8 +17,6 @@ type CHIP8 struct {
 func (c *CHIP8) Update() error {
 	var opcode uint16 = c.CPU.Fetch()
 	var inst cpu.Instruction = c.CPU.Decode(opcode)
-
-	fmt.Println(inst)
 
 	c.CPU.Execute(inst)
 
@@ -65,6 +62,7 @@ func main(){
 
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetWindowSize(640, 320)
+	ebiten.SetTPS(1000)
 
 	if err := ebiten.RunGame(&chip8); err != nil {
 		panic(err)
