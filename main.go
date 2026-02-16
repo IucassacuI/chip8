@@ -62,7 +62,7 @@ func main(){
 
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetWindowSize(640, 320)
-	ebiten.SetTPS(1000)
+	ebiten.SetTPS(500)
 
 	if err := ebiten.RunGame(&chip8); err != nil {
 		panic(err)
