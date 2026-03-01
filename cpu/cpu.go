@@ -94,15 +94,17 @@ func (cpu *CPU) Pop() uint16 {
 	return addr
 }
 
-func (cpu *CPU) reg_dump(vx uint8, i uint16) {
-	for offset := 0; uint8(offset) < vx+1; offset++ {
-		(*cpu.RAM)[cpu.index+uint16(offset)] = cpu.registers[offset]
+func (cpu *CPU) reg_dump(vx uint8) {
+	for offset := 0; offset < int(vx+1); offset++ {
+		(*cpu.RAM)[cpu.index] = cpu.registers[offset]
+		cpu.index++
 	}
 }
 
-func (cpu *CPU) reg_load(vx uint8, i uint16) {
+func (cpu *CPU) reg_load(vx uint8) {
 	for offset := 0; uint8(offset) < vx+1; offset++ {
-		cpu.registers[offset] = (*cpu.RAM)[cpu.index+uint16(offset)]
+		cpu.registers[offset] = (*cpu.RAM)[cpu.index]
+		cpu.index++
 	}
 }
 
@@ -176,18 +178,19 @@ func (cpu *CPU) Execute(inst Instruction){
 		switch inst.n {
 		case 0:
 			cpu.registers[inst.x] = cpu.registers[inst.y]
-
 		case 1:
 			cpu.registers[inst.x] |= cpu.registers[inst.y]
-
+			cpu.registers[15] = 0
 		case 2:
 			cpu.registers[inst.x] &= cpu.registers[inst.y]
-
+			cpu.registers[15] = 0
 		case 3:
 			cpu.registers[inst.x] ^= cpu.registers[inst.y]
-
+			cpu.registers[15] = 0
 		case 4:
 			res := uint16(cpu.registers[inst.x]) + uint16(cpu.registers[inst.y])
+
+			cpu.registers[inst.x] = uint8(res & 0xff)
 
 			if res > 0xff {
 				cpu.registers[15] = 1
@@ -195,33 +198,42 @@ func (cpu *CPU) Execute(inst Instruction){
 				cpu.registers[15] = 0
 			}
 
+		case 5:
+			res := int16(cpu.registers[inst.x]) - int16(cpu.registers[inst.y])
+
 			cpu.registers[inst.x] = uint8(res & 0xff)
 
-		case 5:
-			if cpu.registers[inst.x] >= cpu.registers[inst.y] {
-				cpu.registers[15] = 1
-			} else {
+			if res < 0 {
 				cpu.registers[15] = 0
+			} else {
+				cpu.registers[15] = 1
 			}
-
-			cpu.registers[inst.x] -= cpu.registers[inst.y]
 
 		case 6:
-			cpu.registers[15] = cpu.registers[inst.x] & 1
-			cpu.registers[inst.x] >>= 1
+			res := cpu.registers[inst.y]
+			bit := res & 1
+			res >>= 1
 
+			cpu.registers[inst.x] = res
+			cpu.registers[15] = bit
 		case 7:
-			if cpu.registers[inst.y] >= cpu.registers[inst.x] {
-				cpu.registers[15] = 1
-			} else {
+			res := int16(cpu.registers[inst.y]) - int16(cpu.registers[inst.x])
+
+			cpu.registers[inst.x] = uint8(res & 0xff)
+
+			if res < 0 {
 				cpu.registers[15] = 0
+			} else {
+				cpu.registers[15] = 1
 			}
 
-			cpu.registers[inst.x] = cpu.registers[inst.y] - cpu.registers[inst.x]
-
 		case 0xe:
-			cpu.registers[15] = cpu.registers[inst.x] >> 7
-			cpu.registers[inst.x] <<= 1
+			res := cpu.registers[inst.y]
+			bit := res >> 7
+			res <<= 1
+
+			cpu.registers[inst.x] = res
+			cpu.registers[15] = bit
 		default:
 			panic("operação ilegal")
 		}
@@ -309,9 +321,9 @@ func (cpu *CPU) Execute(inst Instruction){
 				n -= (*cpu.RAM)[cpu.index+1] * 10
 				(*cpu.RAM)[cpu.index+2] = n
 			case 0x55:
-				cpu.reg_dump(inst.x, cpu.index)
+				cpu.reg_dump(inst.x)
 			case 0x65:
-				cpu.reg_load(inst.x, cpu.index)
+				cpu.reg_load(inst.x)
 			default:
 				panic("operação ilegal")
 			}
