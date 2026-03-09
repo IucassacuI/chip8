@@ -1,14 +1,14 @@
 package main
 
 import (
+	"github.com/IucassacuI/chip8/cpu"
 	"github.com/hajimehoshi/ebiten/v2"
-  "github.com/IucassacuI/chip8/cpu"
 	"image/color"
 	"os"
 )
 
 type CHIP8 struct {
-	RAM [4096]uint8
+	RAM  [4096]uint8
 	VRAM [32][64]uint8
 
 	CPU cpu.CPU
@@ -46,7 +46,7 @@ func (c *CHIP8) Layout(outWidth, outHeight int) (int, int) {
 	return outWidth, outHeight
 }
 
-func main(){
+func main() {
 	var chip8 CHIP8 = CHIP8{
 		CPU: cpu.CPU{},
 	}
@@ -54,7 +54,9 @@ func main(){
 	chip8.CPU.Init(&chip8.RAM, &chip8.VRAM)
 
 	ROM, err := os.ReadFile(os.Args[1])
-	if err != nil {os.Exit(1)}
+	if err != nil {
+		os.Exit(1)
+	}
 
 	for i, b := range ROM {
 		chip8.RAM[0x200+i] = b
